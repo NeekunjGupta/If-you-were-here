@@ -1,0 +1,205 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>If You Were Here</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#fdf2f6;--soft:#d9cdf5;--pink:#f2a6c4;--lav:#b79cf0;--deep:#0e1038;--glass:rgba(18,14,52,.66)}
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--deep);color:var(--ink);font-family:'Cormorant Garamond',Georgia,serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%}
+#scrim{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 55%,rgba(14,16,56,.62),rgba(14,16,56,.38) 70%),linear-gradient(rgba(14,16,56,.25),rgba(14,16,56,.45))}
+#ui{position:fixed;z-index:2;text-shadow:0 1px 3px rgba(14,16,56,.9),0 0 18px rgba(14,16,56,.7);inset:0;display:flex;flex-direction:column;overflow-y:auto;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px)}
+.c{margin:auto;text-align:center;max-width:520px;width:100%;padding:20px 0}
+h1{font-size:clamp(38px,10vw,68px);letter-spacing:.12em;margin:0 0 8px;font-weight:700;text-shadow:0 2px 24px #0008}
+h2{font-size:26px;margin:0 0 10px}p{font-size:21px;line-height:1.35;margin:0 0 12px}
+.sm{font-size:16px;color:#ece4ff;letter-spacing:.04em}
+.btn{display:block;width:100%;min-height:50px;margin:9px 0;padding:10px 18px;border-radius:30px;border:1px solid #fff5;background:rgba(14,16,56,.42);color:var(--ink);font:600 20px 'Cormorant Garamond',Georgia,serif;cursor:pointer;backdrop-filter:blur(6px)}
+.btn.p{background:linear-gradient(135deg,#e58ab0,#9a82e8);border:0;text-shadow:0 1px 2px rgba(14,16,56,.5)}
+.btn.s{display:inline-block;width:auto;margin:4px;min-height:44px;font-size:18px}
+.chip{display:inline-block;min-height:44px;margin:3px;padding:8px 14px;border-radius:24px;border:1px solid #fff5;background:rgba(14,16,56,.4);color:var(--ink);font:600 17px 'Cormorant Garamond',Georgia,serif;cursor:pointer}
+.chip.on{background:linear-gradient(135deg,#e58ab0,#9a82e8);border-color:transparent}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid .chip{margin:0;border-radius:16px}
+.sheet{margin-top:auto;background:var(--glass);backdrop-filter:blur(10px);border-radius:24px;padding:18px;margin-bottom:12px}
+.q{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--pink);margin-bottom:8px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
+.bar{height:6px;border-radius:3px;background:#fff3;overflow:hidden;margin:14px 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,#e58ab0,#9a82e8);width:0}
+.letter{background:var(--glass);border-radius:22px;padding:20px;text-align:left;backdrop-filter:blur(10px)}
+input[type=text]{width:100%;min-height:46px;border-radius:14px;border:1px solid #fff5;background:#ffffff14;color:var(--ink);padding:8px 12px;font:18px 'Cormorant Garamond',Georgia,serif}
+video{width:100%;max-height:62vh;border-radius:14px;background:#000}
+</style></head><body><canvas id="bg"></canvas><div id="scrim"></div><div id="ui"></div>
+<script>
+/* ===== CONFIGURATION — edit here. Nothing is invented: leave birthday empty for a neutral message. =====
+   birthday: "YYYY-MM-DD" (e.g. "2026-10-21"); tz: IANA timezone e.g. "Asia/Kolkata" (empty = device timezone) */
+const CFG={birthday:"",tz:"",nickname:"Panda",name:"",welcome:""};
+
+/* ===== dates ===== */
+function today(){try{return new Date().toLocaleDateString('en-CA',{timeZone:CFG.tz||undefined})}catch(e){return new Date().toLocaleDateString('en-CA')}}
+function daysLeft(){if(!/^\d{4}-\d\d-\d\d$/.test(CFG.birthday))return null;const[y,m,d]=today().split('-').map(Number),b=CFG.birthday.split('-').map(Number),a=Date.UTC(y,m-1,d);let t=Date.UTC(y,b[1]-1,b[2]);if(t<a)t=Date.UTC(y+1,b[1]-1,b[2]);return Math.round((t-a)/864e5)}
+
+/* ===== environments: k=kind, s=sky/wall colours, n=night, f=flags (x=time-of-day adjustable) ===== */
+const TOD={morning:['#ffd9c2','#cfe3f5'],golden:['#f2a97e','#fde2b8'],night:['#14163a','#3b3a7a']};
+const ENV={
+sea:{k:'sea',s:['#8fbfe6','#fbe1cf'],f:'x'},sunsetSea:{k:'sea',s:['#e98f8a','#fcd49a'],f:'sun'},seaNight:{k:'sea',s:['#0e1038','#3a3a7c'],n:1},
+cafe:{k:'room',s:['#f1c7a6','#b9764f'],f:'steam',w:['#f7d89a','#ffe9c8']},rainRoom:{k:'room',s:['#6b6a9a','#3a3560'],f:'rain lamp',w:['#7d86b0','#a9b0cc']},
+rainNight:{k:'room',s:['#3b3868','#1c1a3c'],n:1,f:'rain lamp',w:['#14163a','#3b3a7a']},book:{k:'room',s:['#c98f6a','#6f4535'],f:'shelf lamp'},
+road:{k:'road',s:['#9ccbe8','#fde5c0'],f:'x'},roadNight:{k:'road',s:['#0e1038','#3a3a7c'],n:1},hills:{k:'road',s:['#f4b48c','#fde8c0'],f:'noroad'},view:{k:'road',s:['#ee9a86','#fbd9a2'],f:'sun noroad'},
+town:{k:'city',s:['#9ccbe8','#fde5c0'],f:'x'},city:{k:'city',s:['#b7c4f0','#fbd7d0'],f:'x'},cityNight:{k:'city',s:['#0e1038','#3a3a7c'],n:1},market:{k:'city',s:['#1a1850','#5a3a7a'],n:1,f:'lant'},
+dream:{k:'dream',s:['#b9a6f0','#f7c9dc'],f:'x'},forest:{k:'dream',s:['#17204a','#4a3d8a'],n:1,f:'trees'},observatory:{k:'dream',s:['#0b0d33','#34307a'],n:1,f:'moon'}};
+
+/* ===== scenario data: a = opening choice, b[a] = follow-ups, c = endings. [label,text,env] ===== */
+const D={
+sea:{n:'A Day by the Sea',e0:'sea',i:'The tide is quiet, and the whole day is ours.',
+a:[['Walk the shoreline','We walk where the water meets the sand, shoes in our hands.','sea'],['Find a tiny café','A little café with blue shutters pulls us in from the breeze.','cafe'],['Climb to the rocks','We climb to the rocks and the whole bay opens below us.','view']],
+b:[[['Spread a picnic','We spread a blanket and share everything we packed.','sea'],['Chase the waves','You dare the waves. I pretend I won\'t get wet.','sea']],[['Order one of everything','Two cups, too many pastries, no regrets.','cafe'],['Sit by the window','We watch the harbour slowly wake up.','cafe']],[['Sit and say nothing','Shoulder to shoulder, the silence is perfect.','view'],['Take a photo together','We squeeze into the frame, laughing.','view']]],
+c:[['Watch the sunset','The sky turns peach and gold, and you lean against me.','sunsetSea'],['Stay for the stars','The sea goes dark, the stars come out, and we don\'t leave.','seaNight']]},
+rain:{n:'A Rainy Day Together',e0:'rainRoom',i:'Rain taps the window, and nowhere else needs us.',
+a:[['Make something warm','We make tea, and the kitchen smells of cinnamon.','rainRoom'],['Wander to a bookshop','We dash through the rain into a shop that smells of paper.','book'],['Stay by the window','We watch the rain draw lines down the glass.','rainRoom']],
+b:[[['Share the blanket','One blanket, two cups, no hurry.','rainRoom'],['Put on old songs','Old songs play softly, and you hum along.','rainRoom']],[['Read aloud','You read me a line you love, and I forget the rain.','book'],['Find the hidden corner','Behind the last shelf, a tiny armchair built for two.','book']],[['Race the raindrops','We pick raindrops and race them. You cheat.','rainRoom'],['Draw on the glass','You draw a star in the fog. I draw us beside it.','rainRoom']]],
+c:[['Stay in all evening','Lamplight, rain, and you. We need nothing else.','rainRoom'],['Watch the rain turn to dusk','The rain softens, and the window glows violet.','rainNight']]},
+road:{n:'An Unplanned Road Trip',e0:'road',i:'No map, no plan. An open road and the windows down.',
+a:[['Take the first turn','We take the first exit we see and laugh about it.','town'],['Follow the hills','The road lifts into hills, golden and wide.','hills'],['Stop at a roadside café','A tiny café with a hand-painted sign.','cafe']],
+b:[[['Explore the square','A fountain, a bakery, a dog who adopts us for an hour.','town'],['Buy something odd','We leave with a ridiculous hat and a good story.','town']],[['Pull over and walk','We walk into the grass until the car looks small.','hills'],['Sing too loudly','We sing every word wrong, and mean it.','road']],[['Ask for advice','"Go to the lookout," she says, without a doubt.','cafe'],['Share a slice of pie','One slice, two forks, one winner. Me.','cafe']]],
+c:[['Reach the viewpoint','The road ends at a viewpoint just as the sun begins to set.','view'],['Drive into the night','We drive until the stars are the only map.','roadNight']]},
+city:{n:'A City We Have Never Seen',e0:'city',i:'A city neither of us has seen, and every street is new.',
+a:[['Wander the colourful streets','Awnings, murals, bicycle bells. We get gloriously lost.','city'],['Find the night market','Lanterns, steam, and a hundred smells at once.','market'],['Slip into a little café','Tiny, warm, tucked behind a flower stall.','cafe']],
+b:[[['Find a small shop','A shop of handmade things. You pick out something tiny for me.','city'],['Try something unfamiliar','We eat something we can\'t pronounce. It\'s wonderful.','city']],[['Share street food','We argue over the last bite of every skewer.','market'],['Win a silly game','You win a ridiculous prize. I carry it proudly.','market']],[['Talk till closing','We talk about nothing until they stack the chairs.','cafe'],['Plan a tomorrow','We plan a tomorrow in this city and promise to keep it.','cafe']]],
+c:[['Climb to the viewpoint','The whole city glitters beneath us, and we hold hands.','cityNight'],['Walk home through the lights','We walk slowly, because neither of us wants it to end.','market']]},
+dream:{n:'Our Dream World',e0:'dream',i:'The sky is a little closer here, and nothing is impossible.',
+a:[['Cross the floating islands','We step across bridges of light, island to island.','dream'],['Follow the glowing lights','Little lights drift ahead, as if they know the way.','forest'],['Enter the dream palace','Doors made of moonlight open by themselves.','observatory']],
+b:[[['Jump the last gap','You jump first. I catch your hand halfway.','dream'],['Let the lights carry us','The islands drift us gently along.','dream']],[['Whisper a wish','A light lands on your hand and glows brighter.','forest'],['Chase them through the trees','We run through glowing trees until we\'re breathless.','forest']],[['Climb the tower stairs','Stairs of starlight spiral up beneath our feet.','observatory'],['Open the secret door','Behind it, an endless garden of stars.','observatory']]],
+c:[['Watch the stars together','From the highest island, the stars feel close enough to touch.','observatory'],['Stay in our hidden glade','We find a quiet glade that only we know.','forest']]}};
+const EV=[['Follow the unexpected','Something catches our eye, and we follow it laughing, with no idea where it leads.','KEEP'],['Take the long way','We take the long way, and the day gets better with every turn.','KEEP']];
+const MOODL={Peaceful:'Everything is calm.',Playful:'I can already tell you are planning mischief.',Adventurous:'Something tells me we will not sit still.',Romantic:'The light feels made for us.',Mysterious:'There is a secret around the corner.',Spontaneous:'Neither of us has a plan, and that is the plan.'};
+const STG={'Slow and relaxed':'ac','Balanced':'abc','Full of activities':'abec'},QS={a:'Where does our day begin?',b:'What do we do next?',e:'And then?',c:'How does the day end?'};
+const SC=[['sea','A Day by the Sea'],['rain','A Rainy Day'],['road','An Unplanned Road Trip'],['city','A City We Have Never Seen'],['dream','Our Dream World'],['mix','A Day Full of Surprises']];
+function defn(s){if(s.sc!='mix')return D[s.sc];const a=D[s.src];return{n:'A Day Full of Surprises',e0:a.e0,i:'Today has no plan, only a promise of surprises.',a:a.a,b:a.b,c:D[s.end].c}}
+
+/* ===== drawing (shared by live scene and movie) ===== */
+const ST=Array.from({length:70},(_,i)=>[(i*97%100)/100,(i*53%60)/100,i%3+1]);
+function sky(c,x,y,w,h,sk,n,t,F,u){const g=c.createLinearGradient(0,y,0,y+h);g.addColorStop(0,sk[0]);g.addColorStop(1,sk[1]);c.fillStyle=g;c.fillRect(x-w,y,w*3,h);
+ if(n)ST.forEach((s,i)=>{c.fillStyle=`rgba(255,248,220,${.5+.5*Math.sin(t*2+i)})`;c.fillRect(x+s[0]*w,y+s[1]*h,s[2]*u,s[2]*u)});
+ const sx=x+w*.7,sy=y+h*(F.includes('sun')?.72:.3),r=(n?24:32)*u,rg=c.createRadialGradient(sx,sy,r*.3,sx,sy,r*4);rg.addColorStop(0,n?'rgba(255,246,216,.35)':'rgba(255,240,200,.7)');rg.addColorStop(1,'rgba(255,240,200,0)');c.fillStyle=rg;c.fillRect(sx-r*4,sy-r*4,r*8,r*8);c.fillStyle=n?'#fff6d8':'#fff3d0';c.beginPath();c.arc(sx,sy,r,0,7);c.fill();
+ c.fillStyle=n?'rgba(180,170,230,.25)':'rgba(255,255,255,.65)';for(let i=0;i<4;i++){const cxp=x+((i*w/3.2+t*(6+i*3))%(w+260*u))-130*u;c.beginPath();c.ellipse(cxp,y+h*(.15+.12*i),70*u,16*u,0,0,7);c.fill()}}
+function P(c,x,y,u,g,t,ps,lean){c.save();c.translate(x,y);c.rotate(lean);c.scale(u*(g?1:1.08),u*(g?1:1.08));const bob=ps=='walk'?Math.sin(t*4+(g?0:1))*2:Math.sin(t*1.5)*1;c.translate(0,bob+(ps=='sit'?34:0));
+ const sw=ps=='walk'?Math.sin(t*4+(g?0:1))*7:0;
+ if(ps!='sit'){c.fillStyle=g?'#c98aa8':'#2b2f66';c.fillRect(-13+sw,-52,10,52);c.fillRect(3-sw,-52,10,52);c.fillStyle='#2a1f33';c.fillRect(-14+sw,-4,13,5);c.fillRect(2-sw,-4,13,5)}
+ if(g){c.fillStyle='#3b2433';c.beginPath();c.ellipse(0,-112,19,34,0,0,7);c.fill();c.fillStyle='#e9a6c1';c.beginPath();c.moveTo(-14,-112);c.lineTo(14,-112);c.lineTo(24,-44);c.lineTo(-24,-44);c.fill()}
+ else{c.fillStyle='#4b5fa8';c.beginPath();c.roundRect(-18,-114,36,68,8);c.fill()}
+ c.fillStyle=g?'#f2c8ae':'#d9a98a';c.beginPath();c.arc(0,-128,15,0,7);c.fill();
+ c.fillStyle=g?'#3b2433':'#1f1d2e';c.beginPath();c.arc(0,-131,16,Math.PI,0);c.fill();if(g){c.fillRect(-17,-131,6,30)}else{c.fillRect(-16,-131,32,5)}
+ c.fillStyle='#2a1f33';c.fillRect(-6,-127,2.5,3);c.fillRect(4,-127,2.5,3);c.strokeStyle='#2a1f33';c.lineWidth=1.4;c.beginPath();c.arc(0,-122,4,.2,2.9);c.stroke();c.restore()}
+function draw(c,W,H,s,t,o){
+ const E=ENV[s.env],k=E.k,F=E.f||'',por=W<H,hz=por?.42:.58,gy=H*(por?.56:.7),u=Math.min(W/640,H/500),cu=u*(por?1.7:1.25),fy=gy+H*.05;
+ let sk=E.s,n=E.n;if(F.includes('x')&&s.tod){sk=TOD[s.tod];n=s.tod=='night'}
+ const f=o?Math.min(1,t/o.dur):(Math.sin(t*.15)+1)/2;c.save();c.translate(W/2,H/2);c.scale(1.06+.08*f,1.06+.08*f);c.translate(-W/2+(o?o.px:1)*(f-.5)*W*.05,-H/2);
+ if(k=='sea'){sky(c,0,0,W,H*(hz+.12),sk,n,t,F,u);const sy=H*hz,sun=F.includes('sun');let g=c.createLinearGradient(0,sy,0,H);g.addColorStop(0,n?'#1d2358':sun?'#d8788a':'#6fa6d6');g.addColorStop(1,n?'#0e1038':sun?'#6b5a9a':'#3f7fb5');c.fillStyle=g;c.fillRect(-W,sy,W*3,H);
+  c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=2;for(let i=0;i<7;i++){c.beginPath();const y0=sy+(10+i*i*3.2)*u;for(let x=-20;x<=W+20;x+=14)c.lineTo(x,y0+Math.sin(x*.02+t*1.2+i)*(2+i*.8)*u);c.stroke()}
+  c.fillStyle=n?'#4a4672':'#ecd0ae';c.beginPath();c.moveTo(-W,H);c.lineTo(-W,gy);c.quadraticCurveTo(W*.5,gy-14*u,W*2,gy+10*u);c.lineTo(W*2,H);c.fill()}
+ else if(k=='road'){sky(c,0,0,W,H*(hz+.12),sk,n,t,F,u);const sun=F.includes('sun'),cols=n?['#1e1f55','#171a48','#0f1238']:sun?['#e5a0a0','#c98aa0','#a0749a']:['#a9b6e0','#8c9bd0','#6d7fc0'],vy=H*hz+30*u;
+  for(let l=0;l<3;l++){c.fillStyle=cols[l];c.beginPath();c.moveTo(-W,H);for(let x=-W;x<=W*2;x+=16)c.lineTo(x,H*hz+(l*18-30*Math.sin((x+t*(6+l*8))*(.004+l*.002)+l*2))*u);c.lineTo(W*2,H);c.fill()}
+  c.fillStyle=n?'#1b2a3a':sun?'#a47a6a':'#6c8f6a';c.fillRect(-W,vy,W*3,H);
+  if(!F.includes('noroad')){c.fillStyle='#46465e';c.beginPath();c.moveTo(W*.48,vy);c.lineTo(W*.52,vy);c.lineTo(W*.95,H);c.lineTo(W*.05,H);c.fill();for(let i=0;i<8;i++){const p=((i+t*.5)%8)/8,y=vy+(H-vy)*p*p,w=1+14*p*p;c.fillStyle='rgba(255,245,220,.8)';c.fillRect(W/2-w/2,y,w,w*2.2)}}}
+ else if(k=='city'){sky(c,0,0,W,H*(hz+.12),sk,n,t,F,u);const by=H*hz+30*u;
+  for(let l=0;l<2;l++)for(let i=0;i<16;i++){const bw=W/11,bx=i*bw*.8-bw*.5+l*bw*.4,bh=(50+((i*37+l*19)%90))*u*(1.7-l*.4),top=by-bh+l*20*u;c.fillStyle=n?(l?'#1d1f55':'#262a66'):(l?'#9a8fc0':'#b7a8d8');c.fillRect(bx,top,bw*.75,bh+H);
+   if(n)for(let j=0;j<8;j++)for(let q=0;q<3;q++)if((i*j+q+l)%3==0){c.fillStyle='rgba(255,220,140,.8)';c.fillRect(bx+8*u+q*bw*.22,top+14*u+j*22*u,6*u,8*u)}}
+  c.fillStyle=n?'#2a2650':'#8a7aa0';c.fillRect(-W,gy-8*u,W*3,H);
+  if(F.includes('lant'))for(let i=0;i<9;i++){const x=W*(i+.5)/9,y=H*.2+Math.sin(i*.9)*12*u+Math.sin(t+i)*3,r=c.createRadialGradient(x,y,2,x,y,30*u);r.addColorStop(0,'rgba(255,190,110,.95)');r.addColorStop(1,'rgba(255,150,80,0)');c.fillStyle=r;c.fillRect(x-30*u,y-30*u,60*u,60*u)}}
+ else if(k=='dream'){sky(c,0,0,W,H,sk,n,t,F,u);
+  for(let i=0;i<4;i++){const ix=W*(.12+.25*i),iy=H*(.3+.1*(i%2))+Math.sin(t*.8+i)*8*u;c.fillStyle=n?'#4a6aa0':'#9fc7a0';c.beginPath();c.ellipse(ix,iy,60*u,12*u,0,0,7);c.fill();c.fillStyle='#7a6a9a';c.beginPath();c.moveTo(ix-60*u,iy);c.lineTo(ix+60*u,iy);c.lineTo(ix,iy+45*u);c.fill()}
+  if(F.includes('trees'))for(let i=0;i<9;i++){const x=W*(i+.3)/9;c.fillStyle='#0f1238';c.fillRect(x,H*.2,16*u,H);c.fillStyle='rgba(255,240,170,.8)';for(let j=0;j<5;j++)c.fillRect(x+((i*7+j*5)%14)*u,H*.25+j*50*u+Math.sin(t+i+j)*4,3*u,3*u)}
+  c.fillStyle=n?'#3f5f9a':'#9fc7a0';c.beginPath();c.ellipse(W/2,fy+4*u,W*.34,22*u,0,0,7);c.fill();c.fillStyle='#7a6a9a';c.beginPath();c.moveTo(W/2-W*.34,fy+4*u);c.lineTo(W/2+W*.34,fy+4*u);c.lineTo(W/2,fy+120*u);c.fill();
+  for(let i=0;i<26;i++){c.fillStyle='rgba(255,240,190,.8)';c.beginPath();c.arc((i*83%100)/100*W,H*(1-((t*.03+i*.13)%1)),(1+i%3)*u,0,7);c.fill()}}
+ else{const wl=c.createLinearGradient(0,0,0,H);wl.addColorStop(0,sk[0]);wl.addColorStop(1,sk[1]);c.fillStyle=wl;c.fillRect(-W,-H,W*3,H*3);
+  if(F.includes('shelf'))for(let r=0;r<3;r++){c.fillStyle='#3a2430';c.fillRect(0,H*(.1+r*.16)+50*u,W,5*u);for(let b=0;b<W/(14*u);b++){c.fillStyle=['#a24f5f','#4f6fa2','#d9a24f','#6aa27a','#8a6ab5'][(b*7+r*3)%5];c.fillRect(b*14*u,H*(.1+r*.16)+(50-30-((b*5)%14))*u,11*u,(30+((b*5)%14))*u)}}
+  else{const ww=W*(por?.7:.45),wx=(W-ww)/2,wy=H*.08,wh=H*(por?.3:.45);c.save();c.beginPath();c.rect(wx,wy,ww,wh);c.clip();sky(c,wx,wy,ww,wh,E.w,n,t,'',u);
+   if(F.includes('rain')){c.strokeStyle='rgba(220,230,255,.6)';c.lineWidth=1.5;for(let i=0;i<45;i++){const x=wx+((i*61)%100)/100*ww,y=wy+((t*240*u+i*47)%(wh+30))-10;c.beginPath();c.moveTo(x,y);c.lineTo(x-3,y+14*u);c.stroke()}}c.restore();c.strokeStyle='#2a2340';c.lineWidth=6*u;c.strokeRect(wx,wy,ww,wh);c.beginPath();c.moveTo(W/2,wy);c.lineTo(W/2,wy+wh);c.stroke()}
+  c.fillStyle='rgba(60,35,50,.85)';c.fillRect(-W,gy-8*u,W*3,H);
+  if(F.includes('lamp')||F=='steam'){const lx=W*.86,ly=H*.38,r=c.createRadialGradient(lx,ly,5,lx,ly,170*u);r.addColorStop(0,'rgba(255,205,130,.6)');r.addColorStop(1,'rgba(255,205,130,0)');c.fillStyle=r;c.fillRect(lx-170*u,ly-170*u,340*u,340*u);c.fillStyle='#ffd88a';c.beginPath();c.arc(lx,ly,12*u,0,7);c.fill()}
+  if(F.includes('steam')){c.strokeStyle='rgba(255,255,255,.4)';c.lineWidth=2;for(let i=0;i<4;i++){c.beginPath();for(let j=0;j<20;j++)c.lineTo(W*(.3+i*.13)+Math.sin(t*2+j*.5+i)*6,H*.6-((t*30+i*40+j*6)%80)*u);c.stroke()}}}
+ if(!s.title){const ps=s.pose||'walk',sp=ps=='walk'?58:ps=='sit'?40:24,dr=ps=='walk'?Math.sin(t*.5)*10*cu:0,cx=W/2+dr;
+  if(ps=='close'){const g=c.createRadialGradient(cx,fy-80*cu,10,cx,fy-80*cu,230*cu);g.addColorStop(0,'rgba(255,214,170,.5)');g.addColorStop(1,'rgba(255,214,170,0)');c.fillStyle=g;c.fillRect(cx-230*cu,fy-310*cu,460*cu,460*cu)}
+  if(ps=='sit'){c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.ellipse(cx,fy+4*cu,90*cu,10*cu,0,0,7);c.fill()}
+  P(c,cx-sp*cu,fy,cu,1,t,ps,ps=='close'?.07:0);P(c,cx+sp*cu,fy,cu,0,t,ps,ps=='close'?-.07:0)}
+ c.restore();const ga=c.globalAlpha;
+ if(s.title){c.globalAlpha=ga*Math.min(1,t/1.2);c.fillStyle='#fdf2f6';c.textAlign='center';c.font=`700 ${Math.round(Math.min(W*.09,H*.1))}px 'Cormorant Garamond',Georgia,serif`;c.fillText('IF YOU WERE HERE',W/2,H*.46);c.font=`italic ${Math.round(H*.04)}px Georgia,serif`;c.fillText(s.title,W/2,H*.55);c.globalAlpha=ga}
+ if(o&&s.text){const a=Math.min(1,t/.8),fs=Math.round(H*.046);c.globalAlpha=ga*a;const g=c.createLinearGradient(0,H*.72,0,H);g.addColorStop(0,'rgba(10,8,30,0)');g.addColorStop(1,'rgba(10,8,30,.78)');c.fillStyle=g;c.fillRect(0,H*.72,W,H*.28);c.fillStyle='#fff';c.textAlign='center';c.font=`italic ${fs}px Georgia,serif`;
+  let ln=[],l='';s.text.split(' ').forEach(w=>{if(c.measureText(l+w).width>W*.82){ln.push(l);l=''}l+=w+' '});ln.push(l);ln.forEach((x,i)=>c.fillText(x.trim(),W/2,H*.9-(ln.length-1-i)*fs*1.3));c.globalAlpha=ga}}
+
+/* ===== movie planner + real recorder (MediaRecorder → MP4 where the browser supports it, else WebM) ===== */
+function poseOf(e,last){return last?'close':ENV[e].k=='room'?'sit':'walk'}
+function makePlan(s){const d=defn(s),h=s.hist,p=[{title:s.title,env:d.e0,tod:s.tod,d:4,px:1},{env:d.e0,tod:s.tod,text:d.i,pose:'walk',d:5,px:-1}];
+ h.forEach((x,i)=>p.push({env:x.env,tod:i<2?s.tod:null,text:x.text,pose:poseOf(x.env,0),d:5.5,px:i%2?1:-1}));
+ const L=h[h.length-1]||{env:d.e0,text:''};p.push({env:L.env,text:'And at the end of the day, it was still you and me.',pose:'close',d:7.5,px:1});return p}
+function frame(c,W,H,plan,T){let i=0,a=0;while(i<plan.length-1&&T>=a+plan[i].d){a+=plan[i].d;i++}const lt=T-a,cur=plan[i];c.globalAlpha=1;c.fillStyle='#0e1038';c.fillRect(0,0,W,H);
+ const dd=(s,t,al)=>{c.globalAlpha=al;draw(c,W,H,s,t,{dur:s.d,px:s.px});c.globalAlpha=1};
+ if(i>0&&lt<1){dd(plan[i-1],plan[i-1].d+lt,1);dd(cur,lt,lt)}else dd(cur,lt,1);
+ const tot=plan.reduce((x,y)=>x+y.d,0);if(T>tot-1.2){c.fillStyle=`rgba(14,16,56,${(T-(tot-1.2))/1.2})`;c.fillRect(0,0,W,H)}}
+function pad(ac,d,tot){const n=ac.currentTime,g=ac.createGain();g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.05,n+2);g.gain.setValueAtTime(.05,n+tot-3);g.gain.linearRampToValueAtTime(0,n+tot);g.connect(d);[220,277.2,329.6,440].forEach((f,i)=>{const o=ac.createOscillator();o.frequency.value=f;const l=ac.createOscillator(),lg=ac.createGain();l.frequency.value=.1+i*.03;lg.gain.value=4;l.connect(lg);lg.connect(o.detune);l.start();o.connect(g);o.start();o.stop(n+tot+1)})}
+async function render(s,onP,webmOnly){const W=960,H=540,cn=document.createElement('canvas');cn.width=W;cn.height=H;const c=cn.getContext('2d'),plan=makePlan(s),tot=plan.reduce((a,b)=>a+b.d,0);
+ if(!window.MediaRecorder||!cn.captureStream)throw new Error('This browser cannot record video. Try Chrome, Edge, Firefox or Safari 14.1+.');
+ const st=cn.captureStream(30);let ac;try{ac=new AudioContext();const d=ac.createMediaStreamDestination();pad(ac,d,tot);st.addTrack(d.stream.getAudioTracks()[0])}catch(e){}
+ const mt=(webmOnly?['video/webm;codecs=vp8','video/webm;codecs=vp9','video/webm']:['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp8','video/webm;codecs=vp9','video/webm']).find(m=>MediaRecorder.isTypeSupported(m));if(!mt)throw new Error('No supported video format.');
+ const rec=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:3e6}),ch=[];rec.ondataavailable=e=>e.data.size&&ch.push(e.data);const fin=new Promise(r=>rec.onstop=r);rec.start(500);const t0=performance.now();
+ await new Promise(res=>{(function f(){const T=(performance.now()-t0)/1000;if(T>=tot)return res();onP(T/tot);frame(c,W,H,plan,T);requestAnimationFrame(f)})()});
+ frame(c,W,H,plan,tot);await new Promise(r=>setTimeout(r,400));rec.stop();await fin;ac&&ac.close();
+ const blob=new Blob(ch,{type:mt.split(';')[0]});if(blob.size<5e3)throw new Error('The recording came out empty.');return{blob,url:URL.createObjectURL(blob),ext:mt.includes('mp4')?'mp4':'webm',secs:Math.round(tot)}}
+
+function playable(url){return new Promise(res=>{const v=document.createElement('video');v.muted=true;v.preload='auto';v.playsInline=true;let d=0;const f=ok=>{if(!d){d=1;v.removeAttribute('src');res(ok)}};v.onloadeddata=()=>f(true);v.onerror=()=>f(false);setTimeout(()=>f(true),6000);v.src=url})}
+
+/* ===== persistence (localStorage for stories; rendered videos live only in this browser session) ===== */
+const MOV={};let busy=0;
+const load=()=>{try{return JSON.parse(localStorage.getItem('iywh')||'[]')}catch(e){return[]}};
+function save(s){try{const a=load().filter(x=>x.id!=s.id);a.unshift(s);localStorage.setItem('iywh',JSON.stringify(a))}catch(e){}}
+const seen=()=>{try{return localStorage.getItem('iywh_seen')}catch(e){}},setSeen=()=>{try{localStorage.setItem('iywh_seen','1')}catch(e){}};
+
+/* ===== UI ===== */
+const ui=document.getElementById('ui'),cv=document.getElementById('bg'),cx=cv.getContext('2d'),T0=performance.now();let cur={env:'dream',tod:'night',pose:'close'},S=null,C={sc:'sea',mood:'Peaceful',pace:'Balanced',tod:'golden',note:''},step=0;
+function fit(){const r=Math.min(devicePixelRatio||1,1.5);cv.width=innerWidth*r;cv.height=innerHeight*r}addEventListener('resize',fit);fit();
+(function loop(){if(!busy)draw(cx,cv.width,cv.height,cur,(performance.now()-T0)/1000);requestAnimationFrame(loop)})();
+const show=h=>{ui.innerHTML=h;ui.scrollTop=0;document.getElementById('scrim').style.display=''},rnd=a=>a[Math.floor(Math.random()*a.length)];
+const chips=(k,arr)=>arr.map(v=>`<button class="chip ${C[k]==v?'on':''}" onclick="C.${k}='${v}';creator()">${v}</button>`).join('');
+
+function home(){cur={env:'dream',tod:'night',pose:'close'};const d=daysLeft();
+ const cd=d===null?'A little world, made for your birthday':d==0?'Happy birthday':d==1?'1 day until your birthday':d+' days until your birthday';
+ show(`<div class="c"><h1>IF YOU<br>WERE HERE</h1><p><i>Every world is different. Every story leads us back to each other.</i></p><p class="sm">${cd}</p>
+ <button class="btn p" onclick="creator()">Create a New Story</button><button class="btn" onclick="cont()">Continue My Story</button><button class="btn" onclick="surprise()">Surprise Me</button><button class="btn" onclick="lib()">My Stories</button></div>`)}
+function intro(){step=0;cur={env:'dream',tod:'night',pose:'walk'};
+ show(`<div class="c"><p class="sm">SEVEN DAYS BEFORE YOUR DAY</p><p><i>Somewhere between all the places we haven't visited, all the things we haven't tried, and all the moments we haven't experienced together, there's a little world waiting for us.</i></p><button class="btn p" onclick="letter()">Step inside</button></div>`)}
+function letter(){const d=daysLeft(),nm=CFG.nickname||CFG.name||'love',dl=d===7?'Your birthday is only seven days away':'Your birthday is on its way';cur={env:'forest',pose:'close'};
+ show(`<div class="c"><div class="letter">${CFG.welcome?`<p>${CFG.welcome}</p>`:''}<p>Happy pre-birthday, my ${nm}. ❤️</p><p>${dl}, and I wanted to give you something a little different before your special day arrives.</p><p>I can't fit every place I want to take you, every moment I want to share with you, or every little adventure I imagine us having into one gift.</p><p>So I made you a little world instead.</p><p>You can change the setting, choose our adventures, imagine different versions of our perfect day, and come back whenever you want to create another story.</p><p>The details are yours to decide. But in every world, there's one thing I want to stay the same: at the end of the day, it's still you and me.</p><p>Now go create our first adventure. I wonder what your perfect day with me looks like. 💜</p></div><button class="btn p" onclick="setSeen();creator()">Create our first adventure</button></div>`)}
+function creator(){const n=document.getElementById('note');if(n)C.note=n.value;cur={env:D[C.sc]?D[C.sc].e0:'dream',tod:C.tod,pose:'walk'};
+ show(`<div class="c"><h2>Choose our world</h2><div class="grid">${SC.map(x=>`<button class="chip ${C.sc==x[0]?'on':''}" onclick="C.sc='${x[0]}';creator()">${x[1]}</button>`).join('')}</div>
+ <p class="sm" style="margin-top:12px">MOOD</p>${chips('mood',Object.keys(MOODL))}<p class="sm">PACE</p>${chips('pace',Object.keys(STG))}<p class="sm">TIME OF DAY</p>${chips('tod',['morning','golden','night'])}
+ <p class="sm">A DETAIL YOU WANT IN OUR DAY (OPTIONAL)</p><input id="note" type="text" value="${C.note.replace(/"/g,'')}" maxlength="80" placeholder="e.g. we share one umbrella"><button class="btn p" onclick="begin()">Begin our story</button><button class="btn" onclick="home()">Back</button></div>`)}
+function surprise(){C.sc=rnd(SC)[0];C.mood=rnd(Object.keys(MOODL));C.pace=rnd(Object.keys(STG));C.tod=rnd(['morning','golden','night']);C.note='';cur={env:D[C.sc]?D[C.sc].e0:'dream',tod:C.tod,pose:'walk'};
+ show(`<div class="c"><p class="sm">YOUR SURPRISE</p><h2>${SC.find(x=>x[0]==C.sc)[1]}</h2><p><i>${C.mood} · ${C.pace.toLowerCase()} · ${C.tod}</i></p><button class="btn p" onclick="begin()">Begin this story</button><button class="btn" onclick="surprise()">Surprise me again</button><button class="btn" onclick="creator()">Customise</button></div>`)}
+function begin(){const n=document.getElementById('note');if(n)C.note=n.value;const src=rnd(['sea','road','city']);S={id:'s'+Date.now(),sc:C.sc,mood:C.mood,pace:C.pace,tod:C.tod,note:C.note,src,end:rnd([src,'dream']),ch:[],hist:[],done:0,at:new Date().toISOString(),movie:'none'};S.title=defn(S).n;save(S);play()}
+function node(s){const d=defn(s),k=s.ch.length,g=STG[s.pace],last=s.hist[s.hist.length-1]||{env:d.e0,text:d.i+' '+MOODL[s.mood]};if(k>=g.length)return{...last,fin:1};const c=g[k];
+ return{env:last.env,text:last.text,q:s.sc=='mix'&&c=='c'?'The road bends toward somewhere new':QS[c],opts:c=='a'?d.a:c=='b'?d.b[s.ch[0]]:c=='e'?EV:d.c,tod:k<2?s.tod:null}}
+function play(){const n=node(S),tot=STG[S.pace].length;cur={env:n.env,tod:n.tod,pose:n.fin?'close':poseOf(n.env,0)};
+ const top=`<div class="top"><button class="chip" onclick="save(S);home()">✕ Save &amp; exit</button><span class="sm">${S.ch.length}/${tot}</span></div>`;
+ if(n.fin)return show(`${top}<div class="sheet"><div class="q">The day, together</div><p>${n.text}</p><p><i>And at the end of the day, it was still you and me.</i>${S.note?`<br><span class="sm">${S.note.replace(/</g,'')}</span>`:''}</p><button class="btn p" onclick="S.done=1;save(S);make()">Watch our movie</button></div>`);
+ show(`${top}<div class="sheet"><p>${n.text}</p><div class="q">${n.q}</div>${n.opts.map((o,i)=>`<button class="btn" onclick="pick(${i})">${o[0]}</button>`).join('')}</div>`)}
+function pick(i){const n=node(S),o=n.opts[i];S.ch.push(i);S.hist.push({env:o[2]=='KEEP'?n.env:o[2],text:o[1],l:o[0]});save(S);play()}
+function cont(){const u=load().find(x=>!x.done);u?(S=u,play()):lib()}
+async function make(){busy=0;const s=S;cur={env:s.hist.length?s.hist[s.hist.length-1].env:'dream',pose:'close'};const L=(m,p)=>show(`<div class="c"><h2>Making our movie</h2><p>${m}</p><div class="bar"><i style="width:${p||0}%"></i></div><p class="sm">Recording happens live in this browser, so please keep this tab open and in front (about 40 seconds).</p></div>`);
+ L('Preparing scenes…',0);await new Promise(r=>setTimeout(r,500));busy=1;
+ try{let r=await render(s,p=>L('Rendering animation…',Math.round(p*100)));busy=0;L('Checking the video plays…',100);if(!(await playable(r.url))){URL.revokeObjectURL(r.url);busy=1;r=await render(s,p=>L('Re-recording in a more compatible format…',Math.round(p*100)),true);busy=0}MOV[s.id]=r;s.movie='ready';save(s);watch()}
+ catch(e){busy=0;s.movie='failed';save(s);show(`<div class="c"><h2>The movie didn't finish</h2><p>${e.message}</p><p class="sm">Your story is safe.</p><button class="btn p" onclick="live()">Watch it live instead</button><button class="btn" onclick="make()">Try again</button><button class="btn" onclick="lib()">My Stories</button></div>`)}}
+function watch(){const m=MOV[S.id];if(!m)return make();cur={env:'dream',tod:'night',pose:'close'};
+ show(`<div class="c" style="max-width:900px"><video id="v" src="${m.url}" controls playsinline autoplay></video><p class="sm" style="margin-top:8px">${m.ext.toUpperCase()} · ${m.secs}s · stored in this browser session only; your story stays saved and can be re-rendered anytime.</p>
+ <button class="btn s p" onclick="dl()">Download video</button><button class="btn s" onclick="live()">Watch live</button><button class="btn s" onclick="v.currentTime=0;v.play()">Replay</button><button class="btn s" onclick="creator()">Create another story</button><button class="btn s" onclick="lib()">My Stories</button></div>`);
+ const v=document.getElementById('v');v.onerror=()=>{v.insertAdjacentHTML('afterend','<p>This phone could not play the recording. Tap Watch live to see the movie directly.</p>')};v.onloadedmetadata=()=>{if(v.duration===Infinity){v.currentTime=1e7;v.ontimeupdate=()=>{v.ontimeupdate=null;v.currentTime=0}}}}
+let LV=0;
+function live(){const s=S,plan=makePlan(s),tot=plan.reduce((a,b)=>a+b.d,0),id=++LV;busy=1;let ac;try{ac=new AudioContext();pad(ac,ac.destination,tot)}catch(e){}
+ const end=()=>{LV++;busy=0;try{ac&&ac.close()}catch(e){}};window.endLive=end;
+ show('<div class="top"><button class="chip" onclick="endLive();lib()">✕ Close</button></div>');document.getElementById('scrim').style.display='none';
+ const t0=performance.now();(function f(){if(id!==LV)return;const T=(performance.now()-t0)/1000;if(T>=tot){end();const L=s.hist[s.hist.length-1];cur={env:L?L.env:'dream',pose:'close'};show('<div class="c"><h2>The end</h2><p><i>And at the end of the day, it was still you and me.</i></p><button class="btn p" onclick="live()">Watch again</button><button class="btn" onclick="creator()">Create another story</button><button class="btn" onclick="lib()">My Stories</button></div>');return}frame(cx,cv.width,cv.height,plan,T);requestAnimationFrame(f)})()}
+function dl(){const m=MOV[S.id],a=document.createElement('a');a.href=m.url;a.download=(S.title||'our-story').replace(/\W+/g,'-')+'.'+m.ext;a.click()}
+function lib(){const a=load();cur={env:'book',pose:'sit'};
+ show(`<div class="c"><h2>My Stories</h2>${a.length?a.map(s=>`<div class="letter" style="margin-bottom:10px"><p style="margin:0"><b>${s.title}</b></p><p class="sm">${s.mood} · ${new Date(s.at).toLocaleDateString()} · ${s.done?'complete':'unfinished'}</p>
+ <button class="btn s p" onclick="open_('${s.id}')">${s.done?(MOV[s.id]?'Watch movie':'Re-render movie'):'Continue'}</button>${s.done?`<button class="btn s" onclick="S=load().find(x=>x.id=='${s.id}');live()">Watch live</button>`:''}<button class="btn s" onclick="again('${s.id}')">New version</button><button class="btn s" onclick="del('${s.id}')">Delete</button></div>`).join(''):'<p><i>No stories yet.</i></p>'}
+ <button class="btn" onclick="intro()">Replay the introduction</button><button class="btn" onclick="home()">Back</button></div>`)}
+function open_(id){S=load().find(x=>x.id==id);S.done?(MOV[id]?watch():make()):play()}
+function again(id){const o=load().find(x=>x.id==id);C={sc:o.sc,mood:o.mood,pace:o.pace,tod:o.tod,note:o.note||''};creator()}
+function del(id){if(confirm('Delete this story? This cannot be undone.')){try{localStorage.setItem('iywh',JSON.stringify(load().filter(x=>x.id!=id)))}catch(e){}lib()}}
+seen()?home():intro();
+</script></body></html>
